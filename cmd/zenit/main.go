@@ -8,6 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func handlePush(c *gin.Context) {
+	c.String(http.StatusOK, "Handling a push event")
+}
+
+func handlePullRequest(c *gin.Context) {
+	c.String(http.StatusOK, "Handling a pull_request event")
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -23,7 +31,15 @@ func main() {
 	})
 
 	router.POST("/handle", func(c *gin.Context) {
-		c.String(http.StatusOK, string([]byte("Handled!")))
+		event := c.Request.Header["X-Github-Event"][0]
+		switch event {
+		case "push":
+			handlePush(c)
+		case "pull_request":
+			handlePullRequest(c)
+		default:
+			log.Fatal("Unsupported event in the X-Github-Event HTTP header")
+		}
 	})
 
 	router.Run(":" + port)

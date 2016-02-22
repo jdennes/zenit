@@ -22,5 +22,9 @@ func main() {
 		c.HTML(http.StatusOK, "index.tmpl.html", nil)
 	})
 
+	router.POST("/handle", func(c *gin.Context) {
+		c.String(http.StatusOK, string([]byte("Handled!")))
+	})
+
 	router.Run(":" + port)
 }

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# script/server: Run the project locally.
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+go install ./cmd/...
+heroku local

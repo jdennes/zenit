@@ -42,7 +42,7 @@ func CheckSecret(context *gin.Context, bodyContent []byte) bool {
 func HandlePush(context *gin.Context, client *octokit.Client) {
 	var _ Push
 
-	// TODO: Figure out how to let checkSecret read the raw value of
+	// TODO: Figure out how to let CheckSecret read the raw value of
 	// context.Request.Body and have the binding still work.
 	// context.BindJSON(&push)
 

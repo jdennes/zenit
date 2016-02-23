@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"bytes"
 	"io/ioutil"
 	"crypto/sha1"
 	"crypto/hmac"
@@ -14,16 +15,37 @@ import (
 	"github.com/octokit/go-octokit/octokit"
 )
 
+type RequestBodyReader struct {
+	*bytes.Buffer
+}
+func (reader RequestBodyReader) Close() error { return nil }
+
 type Pusher struct {
-	Name string `form:"name" json:"name" binding:"required"`
-  Email string `form:"email" json:"email" binding:"required"`
+	Name string `json:"name" binding:"required"`
+	Email string `json:"email" binding:"required"`
 }
 
-type Push struct {
-	Pusher Pusher `form:"pusher" json:"pusher" binding:"required"`
+type PushEvent struct {
+	Pusher Pusher `json:"pusher" binding:"required"`
 }
 
-func CheckSecret(context *gin.Context, bodyContent []byte) bool {
+// Reads the request body in a buffer and replaces context.Request.Body with a
+// new buffer so that it can be read again by subsequent consumers.
+func GetRequestBody(context *gin.Context) []byte {
+	buffer, err := ioutil.ReadAll(context.Request.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newReader := RequestBodyReader{bytes.NewBuffer(buffer)}
+	context.Request.Body = newReader
+
+	return buffer
+}
+
+func CheckSecret(context *gin.Context) bool {
+	bodyContent := GetRequestBody(context)
+
 	// X-Hub-Signature header format:
 	// https://developer.github.com/webhooks/securing/#validating-payloads-from-github
 	header := context.Request.Header.Get("X-Hub-Signature")
@@ -40,21 +62,17 @@ func CheckSecret(context *gin.Context, bodyContent []byte) bool {
 }
 
 func HandlePush(context *gin.Context, client *octokit.Client) {
-	var _ Push
+	if CheckSecret(context) {
+		var push PushEvent
+		context.Bind(&push)
 
-	// TODO: Figure out how to let CheckSecret read the raw value of
-	// context.Request.Body and have the binding still work.
-	// context.BindJSON(&push)
-
-	bodyContent, _ := ioutil.ReadAll(context.Request.Body)
-	if CheckSecret(context, bodyContent) {
-		context.String(http.StatusOK, "Handling a push event")
+		response := fmt.Sprintf("Handling a push event:\n\n%+v", push)
+		context.String(http.StatusOK, response)
 	}
 }
 
 func HandlePullRequest(context *gin.Context, client *octokit.Client) {
-	bodyContent, _ := ioutil.ReadAll(context.Request.Body)
-	if CheckSecret(context, bodyContent) {
+	if CheckSecret(context) {
 		context.String(http.StatusOK, "Handling a pull_request event")
 	}
 }

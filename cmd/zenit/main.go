@@ -47,20 +47,16 @@ func HandlePush(context *gin.Context, client *octokit.Client) {
 	// context.BindJSON(&push)
 
 	bodyContent, _ := ioutil.ReadAll(context.Request.Body)
-	if !CheckSecret(context, bodyContent) {
-		return
+	if CheckSecret(context, bodyContent) {
+		context.String(http.StatusOK, "Handling a push event")
 	}
-
-	context.String(http.StatusOK, "Handling a push event")
 }
 
 func HandlePullRequest(context *gin.Context, client *octokit.Client) {
 	bodyContent, _ := ioutil.ReadAll(context.Request.Body)
-	if !CheckSecret(context, bodyContent) {
-		return
+	if CheckSecret(context, bodyContent) {
+		context.String(http.StatusOK, "Handling a pull_request event")
 	}
-
-	context.String(http.StatusOK, "Handling a pull_request event")
 }
 
 func main() {

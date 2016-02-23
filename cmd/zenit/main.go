@@ -18,7 +18,10 @@ import (
 type RequestBodyReader struct {
 	*bytes.Buffer
 }
-func (reader RequestBodyReader) Close() error { return nil }
+
+func (reader RequestBodyReader) Close() error {
+	return nil
+}
 
 type Pusher struct {
 	Name string `json:"name" binding:"required"`
@@ -31,6 +34,8 @@ type PushEvent struct {
 
 // Reads the request body in a buffer and replaces context.Request.Body with a
 // new buffer so that it can be read again by subsequent consumers.
+//
+// Returns the request body.
 func GetRequestBody(context *gin.Context) []byte {
 	buffer, err := ioutil.ReadAll(context.Request.Body)
 	if err != nil {
@@ -43,6 +48,12 @@ func GetRequestBody(context *gin.Context) []byte {
 	return buffer
 }
 
+// Checks an incoming request for a X-Hub-Signature header that contains a valid
+// hash signature. More details at:
+// https://developer.github.com/webhooks/securing/#validating-payloads-from-github
+//
+// Returns whether or not the request includes a X-Hub-Signature header that
+// contains a valid hash signature.
 func CheckSecret(context *gin.Context) bool {
 	bodyContent := GetRequestBody(context)
 
@@ -61,6 +72,7 @@ func CheckSecret(context *gin.Context) bool {
 	return true
 }
 
+// Handles a push event.
 func HandlePush(context *gin.Context, client *octokit.Client) {
 	if CheckSecret(context) {
 		var push PushEvent
@@ -71,6 +83,7 @@ func HandlePush(context *gin.Context, client *octokit.Client) {
 	}
 }
 
+// Handles a pull_request event.
 func HandlePullRequest(context *gin.Context, client *octokit.Client) {
 	if CheckSecret(context) {
 		context.String(http.StatusOK, "Handling a pull_request event")

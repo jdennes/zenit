@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"crypto/sha256"
+	"io/ioutil"
+	"crypto/sha1"
 	"crypto/hmac"
+	"encoding/hex"
 
 	"github.com/gin-gonic/gin"
 	"github.com/octokit/go-octokit/octokit"
@@ -21,37 +23,43 @@ type Push struct {
 	Pusher Pusher `form:"pusher" json:"pusher" binding:"required"`
 }
 
-func checkSecret(context *gin.Context) bool {
+func CheckSecret(context *gin.Context, bodyContent []byte) bool {
 	// X-Hub-Signature header format:
-	// https://github.com/github/github-services/blob/8dc2328d0d97005e6431c7ca8c7de9466e38567e/lib/service/http_helper.rb#L76-L77
+	// https://developer.github.com/webhooks/securing/#validating-payloads-from-github
 	header := context.Request.Header.Get("X-Hub-Signature")
-	mac := hmac.New(sha256.New, []byte(os.Getenv("SECRET")))
-	body := ""
-	mac.Write([]byte(body))
+	mac := hmac.New(sha1.New, []byte(os.Getenv("SECRET")))
+	mac.Write(bodyContent)
 	expectedMAC := mac.Sum(nil)
+	signature := fmt.Sprintf("sha1=%s", hex.EncodeToString(expectedMAC))
 
-	if !hmac.Equal([]byte(header), []byte(fmt.Sprintf("sha1=%v", expectedMAC))) {
+	if !hmac.Equal([]byte(header), []byte(signature)) {
 		context.String(http.StatusForbidden, "Unacceptable X-Hub-Signature HTTP header")
 		return false
 	}
 	return true
 }
 
-func handlePush(context *gin.Context, client *octokit.Client) {
-	var push Push
-	context.BindJSON(&push)
+func HandlePush(context *gin.Context, client *octokit.Client) {
+	var _ Push
 
-	if !checkSecret(context) {
+	// TODO: Figure out how to let checkSecret read the raw value of
+	// context.Request.Body and have the binding still work.
+	// context.BindJSON(&push)
+
+	bodyContent, _ := ioutil.ReadAll(context.Request.Body)
+	if !CheckSecret(context, bodyContent) {
 		return
 	}
 
 	context.String(http.StatusOK, "Handling a push event")
 }
 
-func handlePullRequest(context *gin.Context, client *octokit.Client) {
-	if !checkSecret(context) {
+func HandlePullRequest(context *gin.Context, client *octokit.Client) {
+	bodyContent, _ := ioutil.ReadAll(context.Request.Body)
+	if !CheckSecret(context, bodyContent) {
 		return
 	}
+
 	context.String(http.StatusOK, "Handling a pull_request event")
 }
 
@@ -75,9 +83,9 @@ func main() {
 		event := context.Request.Header.Get("X-Github-Event")
 		switch event {
 		case "push":
-			handlePush(context, client)
+			HandlePush(context, client)
 		case "pull_request":
-			handlePullRequest(context, client)
+			HandlePullRequest(context, client)
 		default:
 			log.Fatal("Unsupported event in the X-Github-Event HTTP header")
 		}

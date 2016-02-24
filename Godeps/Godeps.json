@@ -15,6 +15,11 @@
 			"Rev": "4cc2de6207f4128624cbdd16be30f64966c67c08"
 		},
 		{
+			"ImportPath": "github.com/jdennes/go-octokit/octokit",
+			"Comment": "v0.4.0-358-ge208d5a",
+			"Rev": "e208d5ac6c52409b413535785d27dcb9f81b5847"
+		},
+		{
 			"ImportPath": "github.com/jingweno/go-sawyer",
 			"Rev": "1999ae5763d678f3ce1112cf1fda7c7e9cf2aadf"
 		},
@@ -34,11 +39,6 @@
 		{
 			"ImportPath": "github.com/mattn/go-isatty",
 			"Rev": "7fcbc72f853b92b5720db4a6b8482be612daef24"
-		},
-		{
-			"ImportPath": "github.com/octokit/go-octokit/octokit",
-			"Comment": "v0.4.0-357-gf1f04f8",
-			"Rev": "f1f04f892f4239958621138ce826866e7d1147ee"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",

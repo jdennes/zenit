@@ -12,7 +12,7 @@ import (
 	"encoding/hex"
 
 	"github.com/gin-gonic/gin"
-	"github.com/octokit/go-octokit/octokit"
+	"github.com/jdennes/go-octokit/octokit"
 )
 
 type RequestBodyReader struct {
@@ -23,13 +23,28 @@ func (reader RequestBodyReader) Close() error {
 	return nil
 }
 
+type PushEvent struct {
+	Pusher Pusher `json:"pusher" binding:"required"`
+	Repository Repository `json:"repository" binding:"required"`
+	HeadCommit HeadCommit `json:"head_commit" binding:"required"`
+}
+
 type Pusher struct {
 	Name string `json:"name" binding:"required"`
 	Email string `json:"email" binding:"required"`
 }
 
-type PushEvent struct {
-	Pusher Pusher `json:"pusher" binding:"required"`
+type Repository struct {
+	Name string `json:"name" binding:"required"`
+	Owner Owner `json:"owner" binding:"required"`
+}
+
+type Owner struct {
+	Name string `json:"name" binding:"required"`
+}
+
+type HeadCommit struct {
+	ID string `json:"id" binding:"required"`
 }
 
 // Reads the request body in a buffer and replaces context.Request.Body with a
@@ -78,7 +93,25 @@ func HandlePush(context *gin.Context, client *octokit.Client) {
 		var push PushEvent
 		context.Bind(&push)
 
-		response := fmt.Sprintf("Handling a push event:\n\n%+v", push)
+		url, err := octokit.StatusesURL.Expand(octokit.M{"owner": push.Repository.Owner.Name, "repo": push.Repository.Name, "ref": push.HeadCommit.ID})
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		params := octokit.Status{
+			State:       "success",
+			TargetURL:   "https://example.com/build/status",
+			Description: "The build succeeded!",
+			Context:     "blah/blah",
+		}
+		status, result := client.Statuses(url).Create(params)
+		if result.HasError() {
+			log.Fatal(result)
+			return
+		}
+
+		response := fmt.Sprintf("Handling a push event:\n\n%+v\n\nCreated status:\n\n%+v", push, status)
 		context.String(http.StatusOK, response)
 	}
 }
@@ -114,7 +147,7 @@ func main() {
 		case "pull_request":
 			HandlePullRequest(context, client)
 		default:
-			log.Fatal("Unsupported event in the X-Github-Event HTTP header")
+			context.String(http.StatusBadRequest, "Unsupported event in the X-Github-Event HTTP header")
 		}
 	})
 

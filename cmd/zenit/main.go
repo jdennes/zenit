@@ -128,6 +128,9 @@ func HandlePush(context *gin.Context, client *octokit.Client) {
 // Handles a pull_request event.
 func HandlePullRequest(context *gin.Context, client *octokit.Client) {
 	if CheckSecret(context) {
+
+		// TODO: Handle pull requests
+
 		context.String(http.StatusOK, "Handling a pull_request event")
 	}
 }

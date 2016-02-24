@@ -10,6 +10,7 @@ import (
 	"crypto/sha1"
 	"crypto/hmac"
 	"encoding/hex"
+	"math/rand"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jdennes/go-octokit/octokit"
@@ -54,7 +55,8 @@ type HeadCommit struct {
 func GetRequestBody(context *gin.Context) []byte {
 	buffer, err := ioutil.ReadAll(context.Request.Body)
 	if err != nil {
-		log.Fatal(err)
+		context.String(http.StatusInternalServerError, err.Error())
+		return nil
 	}
 
 	newReader := RequestBodyReader{bytes.NewBuffer(buffer)}
@@ -87,6 +89,18 @@ func CheckSecret(context *gin.Context) bool {
 	return true
 }
 
+// Randomly chooses a status to apply to a commit. \O/
+func GetStatus() octokit.Status {
+	states := []string{"error", "success", "success", "failure", "success",}
+	state := states[rand.Intn(len(states))]
+	return octokit.Status{
+		State:       state,
+		TargetURL:   fmt.Sprintf("https://zen.it.example/%v", state),
+		Description: fmt.Sprintf("zen: %v", state),
+		Context:     "zen",
+	}
+}
+
 // Handles a push event.
 func HandlePush(context *gin.Context, client *octokit.Client) {
 	if CheckSecret(context) {
@@ -95,25 +109,20 @@ func HandlePush(context *gin.Context, client *octokit.Client) {
 
 		url, err := octokit.StatusesURL.Expand(octokit.M{"owner": push.Repository.Owner.Name, "repo": push.Repository.Name, "ref": push.HeadCommit.ID})
 		if err != nil {
-			log.Fatal(err)
+			context.String(http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		params := octokit.Status{
-			State:       "success",
-			TargetURL:   "https://example.com/build/status",
-			Description: "The build succeeded!",
-			Context:     "blah/blah",
-		}
-		status, result := client.Statuses(url).Create(params)
+		status, result := client.Statuses(url).Create(GetStatus())
 		if result.HasError() {
-			log.Fatal(result)
+			context.String(http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		response := fmt.Sprintf("Handling a push event:\n\n%+v\n\nCreated status:\n\n%+v", push, status)
 		context.String(http.StatusOK, response)
 	}
+	return
 }
 
 // Handles a pull_request event.

@@ -13,7 +13,7 @@ import (
 	"math/rand"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jdennes/go-octokit/octokit"
+	"github.com/octokit/go-octokit/octokit"
 )
 
 type RequestBodyReader struct {

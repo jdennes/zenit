@@ -25,9 +25,9 @@ func (reader RequestBodyReader) Close() error {
 }
 
 type PushEvent struct {
-	Pusher Pusher `json:"pusher" binding:"required"`
-	Repository Repository `json:"repository" binding:"required"`
-	HeadCommit HeadCommit `json:"head_commit" binding:"required"`
+	Pusher *Pusher `json:"pusher" binding:"required"`
+	Repository *Repository `json:"repository" binding:"required"`
+	HeadCommit *HeadCommit `json:"head_commit" binding:"required"`
 }
 
 type Pusher struct {
@@ -37,7 +37,7 @@ type Pusher struct {
 
 type Repository struct {
 	Name string `json:"name" binding:"required"`
-	Owner Owner `json:"owner" binding:"required"`
+	Owner *Owner `json:"owner" binding:"required"`
 }
 
 type Owner struct {

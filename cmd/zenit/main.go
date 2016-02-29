@@ -107,6 +107,11 @@ func HandlePush(context *gin.Context, client *octokit.Client) {
 		var push PushEvent
 		context.Bind(&push)
 
+		if push.HeadCommit == nil {
+			context.String(http.StatusOK, "Ignoring a push event containing no head_commit")
+			return
+		}
+
 		url, err := octokit.StatusesURL.Expand(octokit.M{"owner": push.Repository.Owner.Name, "repo": push.Repository.Name, "ref": push.HeadCommit.ID})
 		if err != nil {
 			context.String(http.StatusInternalServerError, err.Error())

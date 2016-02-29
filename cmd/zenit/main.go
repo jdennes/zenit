@@ -25,9 +25,9 @@ func (reader RequestBodyReader) Close() error {
 }
 
 type PushEvent struct {
-	Pusher Pusher `json:"pusher" binding:"required"`
-	Repository Repository `json:"repository" binding:"required"`
-	HeadCommit HeadCommit `json:"head_commit" binding:"required"`
+	Pusher *Pusher `json:"pusher" binding:"required"`
+	Repository *Repository `json:"repository" binding:"required"`
+	HeadCommit *HeadCommit `json:"head_commit" binding:"required"`
 }
 
 type Pusher struct {
@@ -37,7 +37,7 @@ type Pusher struct {
 
 type Repository struct {
 	Name string `json:"name" binding:"required"`
-	Owner Owner `json:"owner" binding:"required"`
+	Owner *Owner `json:"owner" binding:"required"`
 }
 
 type Owner struct {
@@ -106,6 +106,11 @@ func HandlePush(context *gin.Context, client *octokit.Client) {
 	if CheckSecret(context) {
 		var push PushEvent
 		context.Bind(&push)
+
+		if push.HeadCommit == nil {
+			context.String(http.StatusOK, "Ignoring a push event containing no head_commit")
+			return
+		}
 
 		url, err := octokit.StatusesURL.Expand(octokit.M{"owner": push.Repository.Owner.Name, "repo": push.Repository.Name, "ref": push.HeadCommit.ID})
 		if err != nil {
